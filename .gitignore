@@ -1,0 +1,35 @@
+# PlatformIO
+.pio/
+.vscode/
+
+# IDE
+.idea/
+*.swp
+*.swo
+
+# Build
+build/
+
+# Claude Code / agent tooling
+.claude/
+.claude-flow/
+.swarm/
+.mcp.json
+CLAUDE.md
+AGENTS.md
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+inkcast/secrets.h
+
+# WASM simulator build artifacts
+sim/wasm/renderer.js
+sim/wasm/renderer.wasm
+
+# Python
+__pycache__/
+*.pyc
+_pre-ruflo-backup/

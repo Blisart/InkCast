@@ -1,0 +1,38 @@
+{
+  "valid": true,
+  "error": "",
+  "current": {
+    "temp": 24,
+    "feels_like": 25,
+    "temp_min": 18,
+    "temp_max": 27,
+    "humidity": 45,
+    "pressure": 1020,
+    "pop": 0.0,
+    "description": "ясно",
+    "icon": "01d",
+    "weather_id": 800,
+    "clouds": 5,
+    "sunrise": 1743048000,
+    "sunset": 1743094800,
+    "wind_speed": 2,
+    "wind_deg": 90,
+    "dt": 1743066000,
+    "city_name": "Москва"
+  },
+  "forecast": [
+    { "day_name": "Чт", "temp_min": 17, "temp_max": 26, "pop": 0.0, "icon": "01d", "weather_id": 800, "valid": true },
+    { "day_name": "Пт", "temp_min": 18, "temp_max": 28, "pop": 0.1, "icon": "02d", "weather_id": 801, "valid": true },
+    { "day_name": "Сб", "temp_min": 19, "temp_max": 29, "pop": 0.0, "icon": "01d", "weather_id": 800, "valid": true },
+    { "day_name": "Вс", "temp_min": 17, "temp_max": 27, "pop": 0.2, "icon": "02d", "weather_id": 801, "valid": true },
+    { "day_name": "Пн", "temp_min": 16, "temp_max": 25, "pop": 0.0, "icon": "01d", "weather_id": 800, "valid": true },
+    { "day_name": "Вт", "temp_min": 17, "temp_max": 26, "pop": 0.05, "icon": "01d", "weather_id": 800, "valid": true }
+  ],
+  "chart": [],
+  "sunny_days": 12,
+  "sunny_total_days": 14,
+  "pressure_trend": 0,
+  "battery_percent": 95,
+  "wifi_rssi": -45,
+  "device_ip": "192.168.1.42"
+}

@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Inkcast — WASM Simulator</title>
+<style>
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+    background: #1a1a2e;
+    color: #e0e0e0;
+    min-height: 100vh;
+}
+
+.app {
+    display: grid;
+    grid-template-columns: 340px 1fr;
+    min-height: 100vh;
+}
+
+/* ── Панель управления ────────────────────────────────────── */
+.panel {
+    background: #16213e;
+    border-right: 1px solid #0f3460;
+    padding: 16px;
+    overflow-y: auto;
+    max-height: 100vh;
+}
+
+.panel h1 {
+    font-size: 16px;
+    color: #e94560;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #0f3460;
+    padding-bottom: 8px;
+}
+
+.panel h2 {
+    font-size: 13px;
+    color: #e94560;
+    margin: 14px 0 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.field {
+    display: flex;
+    align-items: center;
+    margin: 4px 0;
+    gap: 6px;
+}
+
+.field label {
+    flex: 0 0 110px;
+    font-size: 12px;
+    color: #94a3b8;
+    text-align: right;
+}
+
+.field input, .field select, .field textarea {
+    flex: 1;
+    background: #0f3460;
+    border: 1px solid #1a4078;
+    color: #e0e0e0;
+    padding: 4px 6px;
+    border-radius: 3px;
+    font-size: 12px;
+    font-family: inherit;
+}
+
+.field input:focus, .field select:focus, .field textarea:focus {
+    outline: none;
+    border-color: #e94560;
+}
+
+.field input[type="number"] { width: 80px; }
+.field textarea { min-height: 40px; resize: vertical; }
+
+.btn-row {
+    display: flex;
+    gap: 6px;
+    margin: 10px 0;
+}
+
+button {
+    background: #0f3460;
+    color: #e0e0e0;
+    border: 1px solid #1a4078;
+    padding: 6px 12px;
+    border-radius: 3px;
+    cursor: pointer;
+    font-size: 12px;
+    font-family: inherit;
+}
+
+button:hover { background: #1a4078; }
+button.primary { background: #e94560; border-color: #e94560; color: #fff; }
+button.primary:hover { background: #c73750; }
+
+.toggle-row {
+    display: flex;
+    gap: 0;
+    margin: 8px 0;
+}
+
+.toggle-row button {
+    flex: 1;
+    border-radius: 0;
+}
+
+.toggle-row button:first-child { border-radius: 3px 0 0 3px; }
+.toggle-row button:last-child  { border-radius: 0 3px 3px 0; }
+.toggle-row button.active { background: #e94560; border-color: #e94560; color: #fff; }
+
+.status {
+    font-size: 11px;
+    color: #64748b;
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px solid #0f3460;
+}
+
+/* ── Область дисплея ──────────────────────────────────────── */
+.display-area {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    background: #0d1117;
+}
+
+.display-frame {
+    background: #2d2d2d;
+    border-radius: 12px;
+    padding: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+}
+
+canvas {
+    display: block;
+    background: #fff;
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
+}
+
+/* ── Адаптивность ─────────────────────────────────────────── */
+@media (max-width: 1200px) {
+    .app {
+        grid-template-columns: 1fr;
+        grid-template-rows: auto 1fr;
+    }
+    .panel { max-height: none; }
+    .display-area { padding: 12px; }
+    canvas { max-width: 100%; height: auto; }
+}
+</style>
+<!-- Emscripten-сгенерированный модуль (должен загрузиться до inline-скрипта) -->
+<script src="renderer.js"></script>
+</head>
+<body>
+<div class="app">
+    <!-- Панель управления -->
+    <div class="panel">
+        <h1>Inkcast WASM</h1>
+
+        <div class="field">
+            <label>Сценарий</label>
+            <select id="scenario">
+                <option value="default">default</option>
+                <option value="sunny">sunny</option>
+                <option value="rain">rain</option>
+                <option value="night">night</option>
+                <option value="low_battery">low_battery</option>
+                <option value="api_error">api_error</option>
+            </select>
+        </div>
+
+        <div class="toggle-row">
+            <button id="mode-normal" class="active">Normal</button>
+            <button id="mode-error">Error</button>
+        </div>
+
+        <h2>Устройство</h2>
+        <div class="field"><label>Battery %</label><input type="number" id="battery" value="78" min="0" max="100"></div>
+        <div class="field"><label>WiFi RSSI</label><input type="number" id="rssi" value="-58" min="-100" max="0"></div>
+        <div class="field"><label>IP</label><input type="text" id="ip" value="192.168.1.42"></div>
+
+        <h2>Текущая погода</h2>
+        <div class="field"><label>Город</label><input type="text" id="city" value="Москва"></div>
+        <div class="field"><label>Темп.</label><input type="number" id="temp" value="3" step="0.1"></div>
+        <div class="field"><label>Ощущается</label><input type="number" id="feels" value="-1" step="0.1"></div>
+        <div class="field"><label>Мин.</label><input type="number" id="tmin" value="-2" step="0.1"></div>
+        <div class="field"><label>Макс.</label><input type="number" id="tmax" value="5" step="0.1"></div>
+        <div class="field"><label>Влажность %</label><input type="number" id="humidity" value="72" min="0" max="100"></div>
+        <div class="field"><label>Давление hPa</label><input type="number" id="pressure" value="1014"></div>
+        <div class="field"><label>Осадки 0..1</label><input type="number" id="pop" value="0.35" step="0.01" min="0" max="1"></div>
+        <div class="field"><label>Описание</label><input type="text" id="desc" value="облачно с прояснениями"></div>
+        <div class="field"><label>Icon (OWM)</label><input type="text" id="icon" value="02d"></div>
+        <div class="field"><label>Weather ID</label><input type="number" id="wid" value="802"></div>
+        <div class="field"><label>Облачность %</label><input type="number" id="clouds" value="45" min="0" max="100"></div>
+        <div class="field"><label>Ветер м/с</label><input type="number" id="wind_speed" value="4" step="0.1"></div>
+        <div class="field"><label>Ветер град.</label><input type="number" id="wind_deg" value="225" min="0" max="360"></div>
+        <div class="field"><label>Timestamp dt</label><input type="number" id="dt" value="1743066000"></div>
+        <div class="field"><label>Sunrise</label><input type="number" id="sunrise" value="1743048000"></div>
+        <div class="field"><label>Sunset</label><input type="number" id="sunset" value="1743094800"></div>
+
+        <h2>Метаданные</h2>
+        <div class="field"><label>Солн. дней</label><input type="number" id="sunny" value="3" min="0"></div>
+        <div class="field"><label>Всего дней</label><input type="number" id="sunny_total" value="14" min="0"></div>
+        <div class="field"><label>Тренд давл.</label><select id="ptrend"><option value="-1">Падает</option><option value="0">Стабильно</option><option value="1" selected>Растёт</option></select></div>
+        <div class="field"><label>TZ offset sec</label><input type="number" id="tz_offset" value="10800"></div>
+
+        <h2>Ошибка</h2>
+        <div class="field"><label>Сообщение</label><input type="text" id="error_msg" value="Weather API: HTTP 401 Unauthorized"></div>
+        <div class="field"><label>Last dt</label><input type="number" id="error_last_dt" value="1743066000"></div>
+        <div class="field"><label>Sleep мин</label><input type="number" id="error_sleep" value="120"></div>
+
+        <div class="btn-row">
+            <button class="primary" id="btn-render">Render</button>
+            <button id="btn-export">Export JSON</button>
+            <button id="btn-import">Import JSON</button>
+            <input type="file" id="file-import" accept=".json" style="display:none">
+        </div>
+
+        <div class="status" id="status">WASM not loaded</div>
+    </div>
+
+    <!-- Дисплей -->
+    <div class="display-area">
+        <div class="display-frame">
+            <canvas id="display" width="800" height="480"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+// ================================================================
+// JavaScript-обёртка для WASM-рендерера e-paper дисплея.
+// ================================================================
+
+let Module = null;
+let wasmReady = false;
+let currentMode = 'normal'; // 'normal' | 'error'
+
+// ── WASM-обёртки ────────────────────────────────────────────────
+const api = {};
+
+async function loadWasm() {
+    const statusEl = document.getElementById('status');
+    statusEl.textContent = 'Loading WASM...';
+
+    try {
+        const factory = await createRenderer();
+        Module = factory;
+
+        // Обёртки для экспортированных функций
+        api.init = Module.cwrap('init', null, []);
+        api.getFramebuffer = Module.cwrap('get_framebuffer', 'number', []);
+        api.getFramebufferSize = Module.cwrap('get_framebuffer_size', 'number', []);
+        api.getDisplayWidth = Module.cwrap('get_display_width', 'number', []);
+        api.getDisplayHeight = Module.cwrap('get_display_height', 'number', []);
+        api.setCurrent = Module.cwrap('set_current', null, [
+            'number', 'number', 'number', 'number',  // temp, feels, tmin, tmax
+            'number', 'number', 'number',              // humidity, pressure, pop
+            'string', 'string', 'number',              // description, icon, weather_id
+            'number', 'number', 'number',              // clouds, sunrise, sunset
+            'number', 'number', 'number', 'string'     // wind_speed, wind_deg, dt, city
+        ]);
+        api.setForecast = Module.cwrap('set_forecast', null, [
+            'number', 'string', 'number', 'number',   // index, day_name, tmin, tmax
+            'number', 'string', 'number'               // pop, icon, weather_id
+        ]);
+        api.setChart = Module.cwrap('set_chart', null, [
+            'number', 'number', 'number', 'number'    // index, dt, temp, pop
+        ]);
+        api.setMeta = Module.cwrap('set_meta', null, [
+            'number', 'number',                         // forecast_count, chart_count
+            'number', 'number', 'number',              // sunny_days, sunny_total, ptrend
+            'number'                                    // tz_offset
+        ]);
+        api.setRenderParams = Module.cwrap('set_render_params', null, [
+            'number', 'number', 'string'               // battery, rssi, ip
+        ]);
+        api.renderNormal = Module.cwrap('render_normal', null, []);
+        api.renderError = Module.cwrap('render_error', null, [
+            'string', 'number', 'number'               // msg, lastDt, sleepMin
+        ]);
+
+        api.init();
+        wasmReady = true;
+        statusEl.textContent = 'WASM loaded. Ready.';
+
+        // Загрузить сценарий по умолчанию
+        await loadScenario(document.getElementById('scenario').value);
+    } catch (e) {
+        statusEl.textContent = 'WASM load error: ' + e.message;
+        console.error('WASM load failed:', e);
+    }
+}
+
+// ── Чтение framebuffer и отрисовка на Canvas ────────────────────
+
+function drawFramebufferToCanvas() {
+    const canvas = document.getElementById('display');
+    const ctx = canvas.getContext('2d');
+    const w = api.getDisplayWidth();
+    const h = api.getDisplayHeight();
+    const bufPtr = api.getFramebuffer();
+    const bufSize = api.getFramebufferSize();
+    const bytesPerRow = Math.ceil(w / 8);
+
+    // Чтение 1bpp framebuffer из WASM heap
+    const fb = new Uint8Array(Module.HEAPU8.buffer, bufPtr, bufSize);
+
+    const imgData = ctx.createImageData(w, h);
+    const pixels = imgData.data;
+
+    for (let y = 0; y < h; y++) {
+        for (let x = 0; x < w; x++) {
+            const byteIdx = y * bytesPerRow + (x >> 3);
+            const bitIdx = 7 - (x & 7);
+            const isBlack = (fb[byteIdx] >> bitIdx) & 1;
+            const c = isBlack ? 0 : 255;
+            const offset = (y * w + x) * 4;
+            pixels[offset]     = c;
+            pixels[offset + 1] = c;
+            pixels[offset + 2] = c;
+            pixels[offset + 3] = 255;
+        }
+    }
+
+    ctx.putImageData(imgData, 0, 0);
+}
+
+// ── Передача данных в WASM и рендер ─────────────────────────────
+
+function getVal(id) {
+    const el = document.getElementById(id);
+    if (!el) return '';
+    if (el.type === 'number') return parseFloat(el.value) || 0;
+    return el.value;
+}
+
+function getInt(id) {
+    return parseInt(document.getElementById(id).value) || 0;
+}
+
+// Генерация синтетического графика (48 точек) когда в сценарии chart пуст
+function generateSyntheticChart(dt, sunrise, sunset, tmin, tmax) {
+    const points = [];
+    const baseTemp = (tmin + tmax) / 2;
+    const amplitude = (tmax - tmin) / 2;
+    const startDt = dt - (dt % 3600); // Начало текущего часа
+
+    for (let i = 0; i < 48; i++) {
+        const pointDt = startDt + i * 3600;
+        // Суточная синусоида: максимум около 14:00, минимум около 02:00
+        const tzOffset = getInt('tz_offset');
+        const localHour = ((pointDt + tzOffset) % 86400) / 3600;
+        const phase = (localHour - 14) / 24 * 2 * Math.PI;
+        const temp = baseTemp + amplitude * Math.cos(phase) + (Math.random() - 0.5) * 1.5;
+
+        // Вероятность осадков с модуляцией
+        const basePop = getVal('pop');
+        const popVariation = Math.max(0, Math.min(1, basePop + (Math.random() - 0.5) * 0.3));
+
+        points.push({ dt: pointDt, temp: Math.round(temp * 10) / 10, pop: popVariation });
+    }
+    return points;
+}
+
+function pushDataToWasm() {
+    // Параметры рендера
+    api.setRenderParams(getInt('battery'), getInt('rssi'), getVal('ip'));
+
+    // Текущая погода
+    api.setCurrent(
+        getVal('temp'), getVal('feels'), getVal('tmin'), getVal('tmax'),
+        getInt('humidity'), getInt('pressure'), getVal('pop'),
+        getVal('desc'), getVal('icon'), getInt('wid'),
+        getInt('clouds'), getInt('sunrise'), getInt('sunset'),
+        getVal('wind_speed'), getInt('wind_deg'), getInt('dt'), getVal('city')
+    );
+
+    // Прогноз (из скрытых данных сценария)
+    const forecastData = window._currentForecast || [];
+    for (let i = 0; i < forecastData.length && i < 6; i++) {
+        const f = forecastData[i];
+        api.setForecast(i, f.day_name, f.temp_min, f.temp_max, f.pop, f.icon, f.weather_id);
+    }
+
+    // График: если сценарий не содержит chart, генерируем синтетический один раз
+    let chartData = window._currentChart || [];
+    if (!chartData || chartData.length === 0) {
+        if (!window._generatedChart) {
+            window._generatedChart = generateSyntheticChart(
+                getInt('dt'), getInt('sunrise'), getInt('sunset'),
+                getVal('tmin'), getVal('tmax')
+            );
+        }
+        chartData = window._generatedChart;
+    }
+    for (let i = 0; i < chartData.length && i < 48; i++) {
+        api.setChart(i, chartData[i].dt, chartData[i].temp, chartData[i].pop);
+    }
+
+    // Метаданные
+    api.setMeta(
+        forecastData.length,
+        chartData.length,
+        getInt('sunny'), getInt('sunny_total'),
+        getInt('ptrend'),
+        getInt('tz_offset')
+    );
+}
+
+function render() {
+    if (!wasmReady) return;
+    const statusEl = document.getElementById('status');
+
+    try {
+        pushDataToWasm();
+
+        if (currentMode === 'error') {
+            api.renderError(getVal('error_msg'), getInt('error_last_dt'), getInt('error_sleep'));
+        } else {
+            api.renderNormal();
+        }
+
+        drawFramebufferToCanvas();
+        statusEl.textContent = 'Rendered (' + currentMode + ' mode) at ' + new Date().toLocaleTimeString();
+    } catch (e) {
+        statusEl.textContent = 'Render error: ' + e.message;
+        console.error('Render failed:', e);
+    }
+}
+
+// ── Загрузка сценария ───────────────────────────────────────────
+
+async function loadScenario(name) {
+    const statusEl = document.getElementById('status');
+    try {
+        const resp = await fetch('../scenarios/' + name + '.json');
+        if (!resp.ok) throw new Error('HTTP ' + resp.status);
+        const data = await resp.json();
+        applyScenario(data);
+        statusEl.textContent = 'Scenario "' + name + '" loaded.';
+    } catch (e) {
+        statusEl.textContent = 'Failed to load scenario: ' + e.message;
+        console.error('Scenario load failed:', e);
+    }
+}
+
+function applyScenario(data) {
+    const c = data.current || {};
+
+    // Устройство
+    setField('battery', data.battery_percent);
+    setField('rssi', data.wifi_rssi);
+    setField('ip', data.device_ip || '');
+
+    // Текущая погода
+    setField('city', c.city_name || '');
+    setField('temp', c.temp);
+    setField('feels', c.feels_like);
+    setField('tmin', c.temp_min);
+    setField('tmax', c.temp_max);
+    setField('humidity', c.humidity);
+    setField('pressure', c.pressure);
+    setField('pop', c.pop);
+    setField('desc', c.description || '');
+    setField('icon', c.icon || '');
+    setField('wid', c.weather_id);
+    setField('clouds', c.clouds);
+    setField('wind_speed', c.wind_speed);
+    setField('wind_deg', c.wind_deg);
+    setField('dt', c.dt);
+    setField('sunrise', c.sunrise);
+    setField('sunset', c.sunset);
+
+    // Метаданные
+    setField('sunny', data.sunny_days);
+    setField('sunny_total', data.sunny_total_days);
+    setField('ptrend', data.pressure_trend);
+    setField('tz_offset', data.timezone_offset_sec || 10800);
+
+    // Прогноз и график (хранятся в памяти, не в полях формы)
+    window._currentForecast = data.forecast || [];
+    window._currentChart = data.chart || [];
+    window._generatedChart = null;  // сбросить синтетический график при смене сценария
+
+    // Ошибка
+    if (data.error) {
+        setField('error_msg', data.error);
+    }
+
+    // Автопереключение режима для сценария api_error
+    if (!data.valid && data.error) {
+        setMode('error');
+    } else {
+        setMode('normal');
+    }
+
+    render();
+}
+
+function setField(id, value) {
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (value === undefined || value === null) return;
+    el.value = value;
+}
+
+// ── Переключение режима ─────────────────────────────────────────
+
+function setMode(mode) {
+    currentMode = mode;
+    document.getElementById('mode-normal').classList.toggle('active', mode === 'normal');
+    document.getElementById('mode-error').classList.toggle('active', mode === 'error');
+}
+
+// ── Экспорт / импорт JSON ───────────────────────────────────────
+
+function exportJSON() {
+    const data = {
+        valid: currentMode === 'normal',
+        error: currentMode === 'error' ? getVal('error_msg') : '',
+        current: {
+            temp: getVal('temp'), feels_like: getVal('feels'),
+            temp_min: getVal('tmin'), temp_max: getVal('tmax'),
+            humidity: getInt('humidity'), pressure: getInt('pressure'),
+            pop: getVal('pop'), description: getVal('desc'),
+            icon: getVal('icon'), weather_id: getInt('wid'),
+            clouds: getInt('clouds'), sunrise: getInt('sunrise'),
+            sunset: getInt('sunset'), wind_speed: getVal('wind_speed'),
+            wind_deg: getInt('wind_deg'), dt: getInt('dt'),
+            city_name: getVal('city')
+        },
+        forecast: window._currentForecast || [],
+        chart: window._currentChart || [],
+        sunny_days: getInt('sunny'),
+        sunny_total_days: getInt('sunny_total'),
+        pressure_trend: getInt('ptrend'),
+        battery_percent: getInt('battery'),
+        wifi_rssi: getInt('rssi'),
+        device_ip: getVal('ip')
+    };
+
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'weather_scenario.json';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+function importJSON(file) {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        try {
+            const data = JSON.parse(e.target.result);
+            applyScenario(data);
+        } catch (err) {
+            document.getElementById('status').textContent = 'Import error: ' + err.message;
+        }
+    };
+    reader.readAsText(file);
+}
+
+// ── Инициализация UI ────────────────────────────────────────────
+
+document.addEventListener('DOMContentLoaded', () => {
+    // Переключение режима
+    document.getElementById('mode-normal').addEventListener('click', () => { setMode('normal'); render(); });
+    document.getElementById('mode-error').addEventListener('click', () => { setMode('error'); render(); });
+
+    // Render по кнопке
+    document.getElementById('btn-render').addEventListener('click', render);
+
+    // Экспорт / импорт
+    document.getElementById('btn-export').addEventListener('click', exportJSON);
+    document.getElementById('btn-import').addEventListener('click', () => {
+        document.getElementById('file-import').click();
+    });
+    document.getElementById('file-import').addEventListener('change', (e) => {
+        if (e.target.files.length > 0) importJSON(e.target.files[0]);
+    });
+
+    // Загрузка сценария
+    document.getElementById('scenario').addEventListener('change', (e) => {
+        loadScenario(e.target.value);
+    });
+
+    // Авто-ререндер при изменении любого поля
+    const inputs = document.querySelectorAll('.panel input, .panel select');
+    inputs.forEach(el => {
+        el.addEventListener('change', () => {
+            // Не перезагружаем сценарий при ручном изменении полей
+            if (el.id !== 'scenario') render();
+        });
+        // Для числовых полей — ререндер при вводе
+        if (el.type === 'number' || el.type === 'text') {
+            el.addEventListener('input', debounce(render, 300));
+        }
+    });
+
+    // Загрузка WASM
+    loadWasm();
+});
+
+function debounce(fn, ms) {
+    let timer;
+    return function(...args) {
+        clearTimeout(timer);
+        timer = setTimeout(() => fn.apply(this, args), ms);
+    };
+}
+</script>
+</body>
+</html>
