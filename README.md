@@ -2,27 +2,27 @@
 
 **English** | [Русский](README.ru.md)
 
+Battery-powered e-paper weather station for the wall, built with an ESP32-S3, a 3.97" display, and a 3D-printed enclosure.
+
+Typical power consumption is about `5-6 mAh/day` at the default 2-hour refresh interval, which translates to roughly `~1 year on a 2000 mAh cell` or `~1.5 years on a 3000 mAh cell`.
+
+## Key Features
+
+- Long battery life thanks to deep sleep between refresh cycles.
+- Large 800x480 e-paper dashboard with current weather, a 48-hour chart, and a 6-day forecast.
+- Fast screen refresh tuned for practical day-to-day use on a large 3.97" panel.
+- Built-in web admin panel for Wi-Fi, weather provider, location, and refresh interval changes without reflashing.
+- Two weather backends: free keyless Open-Meteo and optional OpenWeatherMap One Call 3.0.
+- Desktop simulator in [`sim/`](sim/) for iterating on the UI without touching hardware.
+- Published 3D-printable enclosure files for a complete wall-mounted device.
+
 ![Inkcast device](assets/inkcast.png)
 
-Battery-powered weather station built with an ESP32-S3, a 3.97" e-paper display, and a 3D-printed enclosure. Inkcast shows current conditions, a 48-hour temperature and precipitation chart, a 6-day forecast, battery level, Wi-Fi status, sunrise/sunset times, and a sunny-day streak on a display that stays readable without backlight.
+Inkcast shows current conditions, a 48-hour temperature and precipitation chart, a 6-day forecast, battery level, Wi-Fi status, sunrise/sunset times, and a sunny-day streak on a display that stays readable without backlight.
 
-The firmware supports two weather backends:
-- **Open-Meteo**: free, no API key required, multiple forecast models.
-- **OpenWeatherMap One Call 3.0**: API key based, optional alternative source.
+## Displayed Data
 
-By default the device refreshes once every 2 hours, stores runtime settings in NVS, and spends the rest of the time in deep sleep to maximize battery life.
-
-## Why This Project
-
-- Built for a real battery-powered wall device, not just a bench demo.
-- Fully self-hosted device configuration through an onboard web admin panel.
-- Large high-contrast e-paper UI with charts, forecast cards, and status indicators.
-- Desktop simulator in [`sim/`](sim/) for iterating on layout ideas without reflashing hardware.
-- 3D-printable enclosure files are already published and tested.
-
-## Features
-
-- Current weather block with icon, feels-like temperature, precipitation probability, sunrise, sunset, and sunny-day counter.
+- Current weather block with icon, feels-like temperature, min/max values, precipitation probability, sunrise, sunset, and sunny-day counter.
 - 48-hour chart with temperature curve and precipitation bars.
 - 6-day forecast cards with daily icons and min/max temperatures.
 - Automatic timezone detection from weather API coordinates.
@@ -30,6 +30,13 @@ By default the device refreshes once every 2 hours, stores runtime settings in N
 - Runtime settings storage in NVS, so values survive sleep cycles and reboots.
 - Debug mode that exposes logs and the admin UI without changing firmware.
 - Access point fallback for first-time Wi-Fi provisioning or broken saved credentials.
+
+## Weather Sources
+
+- **Open-Meteo**: free, no API key required, multiple forecast models are available.
+- **OpenWeatherMap One Call 3.0**: requires an API key, useful if you prefer OWM as the backend.
+
+By default the device refreshes once every 2 hours, stores runtime settings in NVS, and spends the rest of the time in deep sleep.
 
 ## Hardware
 
@@ -51,7 +58,7 @@ STL files:
 |---|---|
 | ![Enclosure USB-C cutout](assets/enclosure-usb.png) | ![Enclosure switch cutout](assets/enclosure-switch.png) |
 
-## Assembly Hardware
+## Fasteners
 
 | Item | Qty | Purpose |
 |---|---|---|
@@ -226,7 +233,7 @@ If saved Wi-Fi settings are broken, the device starts an open access point named
 
 The admin page is intentionally simple and assumes a trusted home network. If you need access control, add authentication in `admin_server.cpp`.
 
-## What the Screen Shows
+## Screen Layout
 
 The UI is split into three zones:
 - Top status bar with city, date/time, optional admin IP, weather warning marker, Wi-Fi, and battery state.
@@ -235,7 +242,7 @@ The UI is split into three zones:
 
 This layout is tuned for a large-format always-on weather dashboard rather than a minimal numeric display.
 
-## Display Simulator
+## Simulator (`sim/`)
 
 The repository includes a simulator in [`sim/`](sim/) for iterating on layout changes and visual assets without touching the physical device every time. Use it when you want to tweak typography, spacing, icons, or chart composition faster than the flash-test cycle allows.
 
@@ -248,7 +255,7 @@ sim/      Display simulator for UI iteration
 tools/    Supporting scripts and utilities
 ```
 
-## Power Behavior
+## Power Use
 
 - Default refresh period: every 120 minutes.
 - Supported refresh range: 1 to 1440 minutes.
