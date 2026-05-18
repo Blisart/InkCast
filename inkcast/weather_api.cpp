@@ -247,8 +247,8 @@ static String buildOpenMeteoUrl() {
            "latitude=" + g_settings.owmLat +
            "&longitude=" + g_settings.owmLon +
            "&current=temperature_2m,apparent_temperature,relative_humidity_2m,"
-           "pressure_msl,cloud_cover,wind_speed_10m,wind_direction_10m,"
-           "weather_code,is_day"
+           "pressure_msl,cloud_cover,cloud_cover_low,cloud_cover_mid,"
+           "wind_speed_10m,wind_direction_10m,weather_code,is_day"
            "&hourly=temperature_2m,precipitation_probability"
            "&daily=temperature_2m_max,temperature_2m_min,precipitation_probability_max,"
            "weather_code,sunrise,sunset"
@@ -277,9 +277,21 @@ static void parseOmCurrent(JsonObject cur, JsonObject daily, CurrentWeather& out
     uint8_t wmo = cur["weather_code"].as<int>();
     bool isDay  = cur["is_day"].as<int>() == 1;
     WmoMapped m = mapWmoCondition(wmo, isDay);
+    const char* descRu = wmoDescriptionRu(wmo);
+
+    // Для кодов 0..3 (только облачность, без осадков) Open-Meteo считает по всему
+    // столбу неба — высокие перистые на 8+ км дают code=3 при чистом небе ниже.
+    // Уточняем по low+mid облачности (видимая часть). Если модель не отдаёт эти
+    // поля — оставляем исходный маппинг WMO.
+    if (cur["cloud_cover_low"].is<int>() && cur["cloud_cover_mid"].is<int>()) {
+        int ccLow = cur["cloud_cover_low"].as<int>();
+        int ccMid = cur["cloud_cover_mid"].as<int>();
+        refineCloudByLowMid(wmo, max(ccLow, ccMid), isDay, m, descRu);
+    }
+
     out.weather_id  = m.owmId;
     out.icon        = m.icon;
-    out.description = wmoDescriptionRu(wmo);
+    out.description = descRu;
 
     // temp_min/max из daily[0] (сегодня)
     JsonArray dMax = daily["temperature_2m_max"];
@@ -381,6 +393,8 @@ static WeatherData fetchWeatherFromOm() {
     filter["current"]["relative_humidity_2m"] = true;
     filter["current"]["pressure_msl"] = true;
     filter["current"]["cloud_cover"] = true;
+    filter["current"]["cloud_cover_low"] = true;
+    filter["current"]["cloud_cover_mid"] = true;
     filter["current"]["wind_speed_10m"] = true;
     filter["current"]["wind_direction_10m"] = true;
     filter["current"]["weather_code"] = true;
