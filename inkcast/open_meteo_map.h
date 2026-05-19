@@ -74,3 +74,30 @@ inline const char* wmoDescriptionRu(uint8_t code) {
     }
     return "Облачно";
 }
+
+// Open-Meteo weather_code 0..3 учитывает все облака целиком, включая высокие cirrus
+// на 8+ км — из-за них при чистом небе ниже часто приходит code=3 ("Облачно").
+// Для визуального восприятия важна только нижне-/среднеярусная облачность.
+// Возвращает true и переписывает out/descRu, если код входит в диапазон 0..3.
+inline bool refineCloudByLowMid(uint8_t code, int cloudLowMid, bool isDay,
+                                WmoMapped& out, const char*& descRu) {
+    if (code > 3) return false;
+    if (cloudLowMid < 25) {
+        out.owmId = 800;
+        memcpy(out.icon, isDay ? "01d" : "01n", 4);
+        descRu = "Ясно";
+    } else if (cloudLowMid < 50) {
+        out.owmId = 802;
+        memcpy(out.icon, isDay ? "02d" : "02n", 4);
+        descRu = "Переменная облачность";
+    } else if (cloudLowMid < 85) {
+        out.owmId = 803;
+        memcpy(out.icon, isDay ? "03d" : "03n", 4);
+        descRu = "Облачно с просветами";
+    } else {
+        out.owmId = 804;
+        memcpy(out.icon, isDay ? "04d" : "04n", 4);
+        descRu = "Облачно";
+    }
+    return true;
+}
