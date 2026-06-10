@@ -11,42 +11,6 @@
 // Transport
 // ═══════════════════════════════════════════
 
-// ISRG Root X1 — корневой CA для Let's Encrypt (используется api.openweathermap.org).
-// Срок действия: до 2035-06-04.
-static const char ISRG_ROOT_X1[] PROGMEM = R"EOF(
------BEGIN CERTIFICATE-----
-MIIFazCCA1OgAwIBAgIRAIIQz7DSQONZRGPgu2OCiwAwDQYJKoZIhvcNAQELBQAw
-TzELMAkGA1UEBhMCVVMxKTAnBgNVBAoTIEludGVybmV0IFNlY3VyaXR5IFJlc2Vh
-cmNoIEdyb3VwMRUwEwYDVQQDEwxJU1JHIFJvb3QgWDEwHhcNMTUwNjA0MTEwNDM4
-WhcNMzUwNjA0MTEwNDM4WjBPMQswCQYDVQQGEwJVUzEpMCcGA1UEChMgSW50ZXJu
-ZXQgU2VjdXJpdHkgUmVzZWFyY2ggR3JvdXAxFTATBgNVBAMTDElTUkcgUm9vdCBY
-MTCCAiIwDQYJKoZIhvcNAQEBBQADggIPADCCAgoCggIBAK3oJHP0FDfzm54rVygc
-h77ct984kIxuPOZXoHj3dcKi/vVqbvYATyjb3miGbESTtrFj/RQSa78f0uoxmyF+
-0TM8ukj13Xnfs7j/EvEhmkvBioZxaUpmZmyPfjxwv60pIgbz5MDmgK7iS4+3mX6
-UA5/TR5d8mUgjU+g4rk8Kb4Mu0UlXjIB0ttov0DiNewNwIRt18jA8+o+u3dpjq+s
-WT8KOEUt+zwvo/7V3LvSye0rgTBIlDHCNAymg4VMk7BPZ7hm/ELNKjD+Jo2FR3qy
-HB5T0Y3HsLuJvW5iB4YlcNHlsdu87kGJ55tukmi8mxdAQ4xIWw+5Tv/JHTwM9HH
-vDN223LNb5np9s1u151pTQ/B10DYkTagplW1bY8yREUQuN4iUe1JkZ3SpssoeHw97
-auM27qkdG6lnLIAaOsJo2bEqtAABUMGYOcj4WEpVpa2hJtPLsBFc+r6OE5qjVn2T/
-S3AlR0cMHs0aX7NhB3mTqqMKwXPBMGogFqiMBPH/A50/BH1ELgvPs0tL4nRRhY2+
-u0hprp4A/vMHKArVjGRGdaNqhILPnUk/xjnO3OU31sic6BAas3YNpLYMPHtwofCQ
-g7T0MBV9u3rxOJnvN3f9d5su3/8Q8K0FNXnJGFh91DjOaRIL4DaQHoD1cPf3R8rr
-PZbj5qoE4gRG9mJl2QP3SkfnAgMBAAGjQjBAMA4GA1UdDwEB/wQEAwIBBjAPBgNV
-HRMBAf8EBTADAQH/MB0GA1UdDgQWBBR5tFnme7bl5AFzgAiIyBpY9umbbjANBgkq
-hkiG9w0BAQsFAAOCAgEAVR9YqbyyqFDQDLHYGmkgJykIrGF1XIpu+ILlaS/V9lZL
-ubhzEFnTIZd+50xx+7LSYK05qAvqFyFWhfFQDlnrzuBZ6brJFe+GnY+EgPbk6ZGQ
-3BebYhtF8GaV0nxvwuo77x/Py9auJ/GpsMiu/X1+mvoiBOv/2X/qkSsisRcOj/KK
-NFtY2PwByVS5uCbMiogZiUvsY12QwGUxPBjkMeXNg1UZ8g/Z/cCQLgN1UNtted01
-4GuS7KKaIxFM/TGLuMFhO1PjkPe/jF4r/5fvYj/N9cxb3kdhhmQxkuItiF5W9prT
-tFqq5TpcOPlW3STU71xpVDdpMDTHA0lkX4/yGHRj7ok32CNW8WAS36rgpkCDsaXT
-mDaBk3OuajgR/7vlk25EPNbAqXaPsPP5s1KYP+x/HCh0rVvYYGDtab9LkDnP+sFb
-u09OYIG+Q5S34PZdMFnlj0ts5K0dlq1FJKR2CjKni2uogRSP8xJW+CnWHwNpXal6
-HlqaCGqO/2Sa7rPMFoIT6h5bkVuga/hNo4CZ0IB5F9PYFBGo+NuBZhd8P3FBmSaB
-k7IBjZPDI1NxPKCf+gQ2WSOV1rFPN0C9QKRH/8KHm+sHb5GtF0+/UoP1K9Bg7Iv
-hVo+m/+EhpGeV/5v1oja/YGjaG1GBkT0OPruxvsJ+LfB4tQK8LOWfhYkdbqs=
------END CERTIFICATE-----
-)EOF";
-
 // Координаты и API-ключ берутся из runtime настроек (NVS, см. settings.h),
 // а units/lang остаются compile-time константами из config.h
 static String buildOneCallUrl() {
@@ -91,13 +55,11 @@ static HttpResult httpGet(const String& url) {
     }
 
     WiFiClientSecure client;
-    // OWM — валидация по ISRG Root X1; Open-Meteo (Cloudflare) — без пиннинга CA,
-    // т.к. Cloudflare ротирует сертификаты. Open-Meteo — публичный API без секретов.
-    if (host.indexOf("openweathermap") >= 0) {
-        client.setCACert(ISRG_ROOT_X1);
-    } else {
-        client.setInsecure();
-    }
+    // Оба провайдера без пиннинга CA: и Cloudflare (Open-Meteo), и Sectigo/ZeroSSL
+    // (OpenWeatherMap) ротируют удостоверяющие центры при перевыпуске, из-за чего
+    // зашитый корень рано или поздно перестаёт совпадать и TLS-handshake падает.
+    // Трафик всё равно шифруется; оба API — публичные, секрет только API-ключ OWM.
+    client.setInsecure();
     client.setTimeout(10);                 // секунды (read/write на сокете)
     client.setHandshakeTimeout(10);        // секунды (TLS handshake)
 
